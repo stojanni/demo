@@ -1,4 +1,4 @@
-# Backend test for Datawise.
+# Backend test for Datawise (Text Social Media)
 
 ## Tech stack:
 1. Spring Boot
