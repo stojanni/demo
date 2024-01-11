@@ -1,0 +1,257 @@
+<html>
+
+<head>
+    <Title>Home Page</Title>
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.5/dist/js.cookie.min.js"></script>
+</head>
+
+<body>
+    <h1>Home Page</h1>
+
+    <button onclick="logout()">Logout</button><br><br>
+
+    <label for="findUser">Follow user:</label><br>
+    <input id="findUser" name="findUser"></input>
+    <button onclick="follow(document.getElementById('findUser').value)">Follow</button><br><br>
+
+    <a href="http://localhost:8080?view=my">My Posts</a>
+    <a href="http://localhost:8080?view=follows">Feed</a><br><br>
+
+    <label for="newPost">New post:</label><br>
+    <textarea id="newPost" name="newPost"></textarea><br>
+    <button onclick="post()">Post</button>
+
+    <hr>
+
+    <div id="posts"></div>
+</body>
+
+<script>
+
+    if (Cookies.get('userId') == undefined) location.href = 'http://localhost:8080/login.html'
+
+    let follows;
+
+    (async function () {
+
+        let response = await fetch('http://localhost:8080/getFollows?' + new URLSearchParams({ userId: Cookies.get('userId') }))
+
+        if (response.status === 204) {
+            console.log('No follows')
+        }
+        else if (response.ok) {
+            follows = await response.json()
+            console.log('Follows:', follows)
+        } else {
+            console.error('Failed to fetch follows:', response.status)
+        }
+
+    })()
+
+    let urlParams = new URLSearchParams(window.location.search)
+
+    if (urlParams.get('view') == 'my') {
+        getPosts(Cookies.get('userId'))
+    }
+    else if (urlParams.get('view') == 'follows') {
+        getPosts(follows)
+    } else {
+        location.href = 'http://localhost:8080?view=follows'
+    }
+
+    async function getPosts(id) {
+
+        let response = await fetch('http://localhost:8080/getPosts?' + new URLSearchParams({ userId: Cookies.get('userId'), fetchType: Array.isArray(id) || id == undefined ? "follows" : "my" }))
+
+        if (response.status === 204) {
+            console.log('No feed')
+        } else if (response.ok) {
+
+            let posts = await response.json()
+            console.log('Posts:', posts)
+
+            for (let post of posts) {
+
+                let div = document.createElement("div")
+                document.getElementById("posts").appendChild(div)
+
+                let uid = document.createElement("span")
+                uid.textContent = post.userId
+                div.appendChild(uid)
+
+                let sep = document.createElement("span")
+                sep.textContent = " | "
+                div.appendChild(sep)
+
+                let span = document.createElement("span")
+                span.textContent = post.text
+                div.appendChild(span)
+
+                let sep1 = document.createElement("span")
+                sep1.textContent = " | "
+                div.appendChild(sep1)
+
+                let followBtn = document.createElement("button")
+                followBtn.textContent = "Follow"
+                followBtn.onclick = () => follow(post.userId)
+                div.appendChild(followBtn)
+
+                let unfollowBtn = document.createElement("button")
+                unfollowBtn.textContent = "Unfollow"
+                unfollowBtn.onclick = () => unfollow(post.userId)
+                div.appendChild(unfollowBtn)
+
+                let shareBtn = document.createElement("button")
+                shareBtn.textContent = "Share"
+                shareBtn.onclick = () => alert('http://localhost:8080/post.html?postId=' + post.userId)
+                div.appendChild(shareBtn)
+
+                let commentsResponse = await fetch('http://localhost:8080/getComments?' + new URLSearchParams({ postId: post.postId }))
+
+                if (commentsResponse.status === 204) {
+                    console.log('No comments')
+                } else if (commentsResponse.ok) {
+
+                    let comments = await commentsResponse.json()
+                    console.log('Comments:', comments)
+
+                    for (let comment of comments) {
+
+                        div.appendChild(document.createElement("br"))
+
+                        uid = document.createElement("span")
+                        uid.textContent = comment.userId
+                        div.appendChild(uid)
+
+                        sep = document.createElement("span")
+                        sep.textContent = " | "
+                        div.appendChild(sep)
+
+                        span = document.createElement("span")
+                        span.textContent = comment.text
+                        div.appendChild(span)
+
+                    }
+
+                } else {
+                    console.error('Failed to fetch comments:', commentsResponse.status)
+                }
+
+                let textarea = document.createElement("textarea")
+                textarea.id = "newComment"
+                textarea.name = "newComment"
+
+                let lineBreak = document.createElement("br")
+
+                let button = document.createElement("button")
+                button.textContent = "Comment"
+                button.onclick = () => comment(post.postId)
+
+                div.appendChild(lineBreak.cloneNode())
+                div.appendChild(textarea)
+                div.appendChild(lineBreak.cloneNode())
+                div.appendChild(button)
+                div.appendChild(document.createElement("hr"))
+
+            }
+
+        } else {
+            console.error('Failed to fetch posts:', response.status)
+        }
+
+    }
+
+    async function post() {
+
+        let d = new Date()
+
+        let response = await fetch('http://localhost:8080/post', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                userId: Cookies.get('userId'),
+                text: document.getElementById('newPost').value,
+                date: d.getFullYear() + '-' + d.getMonth() + 1 + '-' + (d.getDate() < 10 ? '0' + d.getDate() : d.getDate())
+            })
+        })
+
+        if (response.status === 204) {
+            alert('Max 1000 chars for free and 3000 for premium')
+        } else if (response.ok) {
+            let result = await response.json()
+            console.log("Post successful", result)
+            location.reload()
+        } else {
+            let error = await response.text()
+            console.error("Post failed:", error)
+        }
+
+    }
+
+    async function comment(postId) {
+
+        let d = new Date()
+
+        let response = await fetch('http://localhost:8080/comment', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                postId,
+                userId: Cookies.get('userId'),
+                text: document.getElementById('newComment').value,
+                date: d.getFullYear() + '-' + d.getMonth() + 1 + '-' + (d.getDate() < 10 ? '0' + d.getDate() : d.getDate())
+            })
+        })
+
+        if (response.status === 204) {
+            alert('Free users can comment up to 5 times')
+        } else if (response.ok) {
+            let result = await response.json()
+            console.log("Comment successful", result)
+            location.reload()
+        } else {
+            let error = await response.text()
+            console.error("Comment failed:", error)
+        }
+
+    }
+
+    async function follow(userId) {
+
+        let response = await fetch('http://localhost:8080/follow?' + new URLSearchParams({ userId: Cookies.get('userId'), followingId: userId }))
+
+        if (response.ok) {
+            alert('Followed')
+        } else {
+            console.error('Failed to follow:', response.status)
+            alert('Could not follow')
+        }
+
+    }
+
+    async function unfollow(userId) {
+
+        let response = await fetch('http://localhost:8080/unfollow?' + new URLSearchParams({ userId: Cookies.get('userId'), followingId: userId }))
+
+        if (response.ok) {
+            alert('Unfollowed')
+        } else {
+            alert('Could not unfollow')
+        }
+
+    }
+
+    function logout() {
+        Cookies.remove('userId')
+        location.href = 'http://localhost:8080/login.html'
+    }
+
+</script>
+
+</html>

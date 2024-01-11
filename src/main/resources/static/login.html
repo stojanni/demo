@@ -1,0 +1,51 @@
+<html>
+
+<head>
+    <Title>Login</Title>
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.5/dist/js.cookie.min.js"></script>
+</head>
+
+<body>
+    <h1>Login</h1>
+
+    <label for="email">Email:</label>
+    <input type="text" id="email" name="email"><br>
+
+    <label for="password">Password:</label>
+    <input type="password" id="password" name="password"><br>
+
+    <button onclick="login()">Login</button><br><br>
+
+    <a href="http://localhost:8080/register.html">Register</a>
+</body>
+
+<script>
+    async function login() {
+
+        var email = document.getElementById("email")
+        var password = document.getElementById("password")
+
+        const response = await fetch('http://localhost:8080/login', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email: email.value, password: password.value })
+        })
+
+        if (response.ok) {
+            const user = await response.json()
+            console.log("Login successful", user)
+            Cookies.set('userId', user.userId)
+            location.href = 'http://localhost:8080?view=follows'
+        } else {
+            const error = await response.text() // or response.json() if the server sends JSON
+            console.error("Login failed:", error)
+            alert("Login failed: " + error)
+        }
+
+    }
+</script>
+
+</html>

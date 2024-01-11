@@ -1,0 +1,74 @@
+<html>
+
+<head>
+    <Title>Register</Title>
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.5/dist/js.cookie.min.js"></script>
+</head>
+
+<body>
+    <h1>Register</h1>
+
+    <label for="email">Email:</label>
+    <input type="text" id="email" name="email"><br>
+
+    <label for="password">Password:</label>
+    <input type="password" id="password" name="password"><br>
+
+    <label for="plan">Plan:</label>
+    <select name="plan" id="plan">
+        <option value="free">Free</option>
+        <option value="premium">Premium</option>
+    </select>
+    <br><br>
+
+    <button onclick="register()">Register</button><br><br>
+
+    <a href="http://localhost:8080/login.html">Login</a>
+</body>
+
+<script>
+    async function register() {
+
+        var email = document.getElementById("email")
+        var password = document.getElementById("password")
+
+        var plan = document.getElementById("plan")
+        var value = plan.value
+
+        console.log(password.value.length)
+        
+        if (validateEmail(email.value) && password.value.length >= 6) {
+
+            const response = await fetch('http://localhost:8080/register', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ email: email.value, password: password.value, plan: plan.options[plan.selectedIndex].text })
+            })
+
+            if (response.ok) {
+                const user = await response.json()
+                console.log("Registration successful", user)
+                Cookies.set('userId', user.userId)
+                location.href = 'http://localhost:8080?view=follows'
+            } else {
+                const error = await response.text() // or response.json() if the server sends JSON
+                console.error("Registration failed:", error)
+                alert("Registration failed: " + error)
+            }
+
+        } else {
+            alert("Email not valid or password too short")
+        }
+
+    }
+
+    function validateEmail(email) {
+        var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        return emailPattern.test(email)
+    }
+</script>
+
+</html>

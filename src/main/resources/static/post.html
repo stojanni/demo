@@ -1,0 +1,101 @@
+<html>
+
+<head>
+    <Title>Post</Title>
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.5/dist/js.cookie.min.js"></script>
+</head>
+
+<body>
+    <h1>Home Page</h1>
+
+    <a href="http://localhost:8080?view=my">My Posts</a>
+    <a href="http://localhost:8080?view=follows">Feed</a><br><br>
+
+    <hr>
+
+    <div id="post"></div>
+</body>
+
+<script>
+
+    let urlParams = new URLSearchParams(window.location.search);
+
+    (async function () {
+        
+        let response = await fetch('http://localhost:8080/getPost?' + new URLSearchParams({ postId: urlParams.get('postId') }))
+
+        if (response.status === 204) {
+            console.log('No feed')
+        } else if (response.ok) {
+
+            let post = await response.json()
+            console.log('Post:', post)
+
+            let div = document.createElement("div")
+            document.getElementById("post").appendChild(div)
+
+            let uid = document.createElement("span")
+            uid.textContent = post.userId
+            div.appendChild(uid)
+
+            let sep = document.createElement("span")
+            sep.textContent = " | "
+            div.appendChild(sep)
+
+            let span = document.createElement("span")
+            span.textContent = post.text
+            div.appendChild(span)
+
+            let sep1 = document.createElement("span")
+            sep1.textContent = " | "
+            div.appendChild(sep1)
+
+            let followBtn = document.createElement("button")
+            followBtn.textContent = "Follow"
+            followBtn.onclick = () => follow(post.userId)
+            div.appendChild(followBtn)
+
+            let unfollowBtn = document.createElement("button")
+            unfollowBtn.textContent = "Unfollow"
+            unfollowBtn.onclick = () => unfollow(post.userId)
+            div.appendChild(unfollowBtn)
+
+            let commentsResponse = await fetch('http://localhost:8080/getComments?' + new URLSearchParams({ postId: urlParams.get('postId') }))
+
+            if (commentsResponse.status === 204) {
+                console.log('No comments')
+            } else if (commentsResponse.ok) {
+
+                let comments = await commentsResponse.json()
+                console.log('Comments:', comments)
+
+                for (let comment of comments) {
+
+                    div.appendChild(document.createElement("br"))
+
+                    uid = document.createElement("span")
+                    uid.textContent = comment.userId
+                    div.appendChild(uid)
+
+                    sep = document.createElement("span")
+                    sep.textContent = " | "
+                    div.appendChild(sep)
+
+                    span = document.createElement("span")
+                    span.textContent = comment.text
+                    div.appendChild(span)
+
+                }
+
+            } else {
+                console.error('Failed to fetch comments:', commentsResponse.status)
+            }
+
+        } else {
+            console.error('Failed to fetch post:', response.status)
+        }
+
+    })();
+</script>
+
+</html>
